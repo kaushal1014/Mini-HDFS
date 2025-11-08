@@ -76,9 +76,14 @@ def handle_command(conn, addr):
             else:
                 header_data += chunk
         
-        header_str = header_data.decode()
-        header = json.loads(header_str)
-        command = header.get('command')
+        try:
+            header_str = header_data.decode()
+            header = json.loads(header_str)
+            command = header.get('command')
+        except json.JSONDecodeError as e:
+            print(f"[{MY_ID}] Error: Invalid JSON header from {addr}: {e} | Raw: {header_data}")
+            conn.close()
+            return
 
         if command == 'STORE_CHUNK':
             chunk_id = header.get('chunk_id')
@@ -144,7 +149,7 @@ def handle_command(conn, addr):
                 print(f"[{MY_ID}] Error: Chunk {chunk_id} not found.")
 
         elif command == 'REPLICATE_CHUNK':
-            # (This logic is unchanged, but it *calls* the updated helper)
+            # (This logic is unchanged, but it calls the updated helper)
             print(f"[{MY_ID}] Received replication command from Namenode.")
             chunk_id = header.get('chunk_id')
             target_host = header.get('target_host')
