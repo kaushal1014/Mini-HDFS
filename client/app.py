@@ -130,7 +130,7 @@ def upload_file():
                     "filename": filename,
                     "filesize": filesize
                 }
-                s_namenode.sendall(json.dumps(request_data).encode())
+                s_namenode.sendall((json.dumps(request_data) + "\n").encode())
                 response_data = s_namenode.recv(4096).decode()
                 response = json.loads(response_data)
                 
