@@ -39,3 +39,8 @@ CHUNK_SIZE_MB = 2
 CHUNK_SIZE_BYTES = CHUNK_SIZE_MB * 1024 * 1024
 REPLICATION_FACTOR = 2
 HEARTBEAT_INTERVAL_SEC = 5
+
+# --- 6. Secondary Namenode Configuration ---
+SNN_ID = "secondary_namenode_0"
+SNN_DIR = "snn_checkpoints"
+SNN_CHECKPOINT_INTERVAL_SEC = 30
