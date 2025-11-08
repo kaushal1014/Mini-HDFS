@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>File Info: {{ filename }}</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; background: #f4f4f4; }
+        h1, h2 { color: #333; }
+        table {
+            width: 80%;
+            border-collapse: collapse;
+            margin: 2em 0;
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #eee;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>File Info: {{ filename }}</h1>
+    
+    <p><a href="/">← Back to Dashboard</a></p>
+
+    <h2>Chunk Distribution Map</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Chunk ID (in order)</th>
+                <th>Stored On (Replicas)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for chunk_id in chunk_ids %}
+            <tr>
+                <td>{{ chunk_id }}</td>
+                <td>
+                    {% for location in chunk_locations[chunk_id] %}
+                        {{ location.id }}
+                        {% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

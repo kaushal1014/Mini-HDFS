@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mini HDFS Dashboard</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; background: #f4f4f4; }
+        h1, h2 { color: #333; }
+        .container { display: flex; flex-wrap: wrap; gap: 40px; }
+        .section { background: #fff; border: 1px solid #ccc; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .flash {
+            padding: 1em;
+            margin: 1em 0;
+            background: #e0f7fa;
+            border: 1px solid #00acc1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mini HDFS Dashboard</h1>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash">
+          <ul>
+            {% for message in messages %}
+              <li>{{ message }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="container">
+        <div class="section">
+            <h2>Upload a File</h2>
+            <form action="/upload" method="POST" enctype="multipart/form-data">
+                <input type="file" name="file" required>
+                <button type="submit">Upload</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>System Status</h2>
+            <h3>Datanodes</h3>
+            <ul>
+                {% if datanodes %}
+                    {% for node, status in datanodes.items() %}
+                        <li style="color: {% if status == 'Alive' %}green{% else %}red{% endif %};">
+                            <strong>{{ node }}:</strong> {{ status }}
+                        </li>
+                    {% endfor %}
+                {% else %}
+                    <li>(No data from Namenode yet)</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Files in HDFS</h2>
+            <ul>
+                {% if files %}
+                    {% for filename in files %}
+                        <li>
+                            <a href="/file/{{filename}}">{{ filename }}</a> 
+                            (<a href="/download/{{filename}}">download</a>)
+                        </li>
+                    {% endfor %}
+                {% else %}
+                    <li>(No files in HDFS)</li>
+                {% endif %}
+                </ul>
+        </div>
+    </div>
+</body>
+</html>
