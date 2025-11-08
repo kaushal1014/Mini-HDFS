@@ -5,12 +5,13 @@ import os
 import sys
 import config
 import json
-import hashlib # 
+import hashlib
 
 MY_INFO = {}
 MY_ID = ""
 
 def send_heartbeat():
+    """Continuously send heartbeat messages to the Namenode."""
     while True:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -23,8 +24,9 @@ def send_heartbeat():
             print(f"[{MY_ID}] Error sending heartbeat: {e}")
         time.sleep(config.HEARTBEAT_INTERVAL_SEC)
 
+
 def send_chunk_to_datanode(datanode_host, datanode_port, datanode_id, chunk_id, chunk_data):
-    """Helper function to send a chunk AND ITS CHECKSUM to another datanode."""
+    """Helper function to send a chunk and its checksum to another datanode."""
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((datanode_host, datanode_port))
@@ -35,7 +37,7 @@ def send_chunk_to_datanode(datanode_host, datanode_port, datanode_id, chunk_id, 
                 "command": "STORE_CHUNK",
                 "chunk_id": chunk_id,
                 "size": len(chunk_data),
-                "checksum": chunk_checksum 
+                "checksum": chunk_checksum
             }
             header_json = json.dumps(header) + '\n'
             
@@ -54,9 +56,11 @@ def send_chunk_to_datanode(datanode_host, datanode_port, datanode_id, chunk_id, 
         print(f"[{MY_ID}] Failed to replicate chunk {chunk_id} to {datanode_id}: {e}")
         return False
 
+
 def handle_command(conn, addr):
-    """Handles an incoming command (e.g., from a client or namenode)"""
+    """Handles an incoming command (e.g., from a client or namenode)."""
     try:
+        # --- Read header (JSON) with newline termination ---
         header_data = b""
         buffer = b""
         while b'\n' not in header_data:
@@ -67,20 +71,20 @@ def handle_command(conn, addr):
             if b'\n' in chunk:
                 header_part, rest_part = chunk.split(b'\n', 1)
                 header_data += header_part
-                buffer = rest_part 
-                break 
+                buffer = rest_part
+                break
             else:
                 header_data += chunk
-        
+
         header_str = header_data.decode()
         header = json.loads(header_str)
         command = header.get('command')
 
+        # --- Handle STORE_CHUNK command ---
         if command == 'STORE_CHUNK':
             chunk_id = header.get('chunk_id')
             chunk_size = header.get('size')
             chunk_path = os.path.join(MY_INFO["storage_dir"], chunk_id)
-            
             client_checksum = header.get('checksum')
             
             print(f"[{MY_ID}] Receiving chunk {chunk_id} ({chunk_size} bytes)")
@@ -88,7 +92,7 @@ def handle_command(conn, addr):
             m = hashlib.md5()
             with open(chunk_path, 'wb') as f:
                 f.write(buffer)
-                m.update(buffer) 
+                m.update(buffer)
                 bytes_received = len(buffer)
                 
                 while bytes_received < chunk_size:
@@ -97,27 +101,28 @@ def handle_command(conn, addr):
                     if not data:
                         break
                     f.write(data)
-                    m.update(data) 
+                    m.update(data)
                     bytes_received += len(data)
             
             local_checksum = m.hexdigest()
             
             if bytes_received != chunk_size:
-                print(f"[{MY_ID}] Error: Incomplete chunk {chunk_id}. Expected {chunk_size} got {bytes_received}")
-                os.remove(chunk_path) 
+                print(f"[{MY_ID}] Error: Incomplete chunk {chunk_id}. Expected {chunk_size}, got {bytes_received}")
+                os.remove(chunk_path)
                 conn.sendall(json.dumps({"status": "ERROR", "message": "Incomplete chunk"}).encode())
                 
             elif local_checksum != client_checksum:
                 print(f"[{MY_ID}] FATAL: CHUNK CORRUPTION DETECTED on {chunk_id}")
-                print(f"    Client   MD5: {client_checksum}")
-                print(f"    Local MD5: {local_checksum}")
-                os.remove(chunk_path) 
+                print(f"    Client MD5: {client_checksum}")
+                print(f"    Local  MD5: {local_checksum}")
+                os.remove(chunk_path)
                 conn.sendall(json.dumps({"status": "ERROR", "message": "Checksum mismatch"}).encode())
                 
             else:
                 print(f"[{MY_ID}] Successfully stored chunk {chunk_id} (Checksum OK)")
                 conn.sendall(json.dumps({"status": "SUCCESS"}).encode())
 
+        # --- Handle RETRIEVE_CHUNK command ---
         elif command == 'RETRIEVE_CHUNK':
             chunk_id = header.get('chunk_id')
             chunk_path = os.path.join(MY_INFO["storage_dir"], chunk_id)
@@ -134,7 +139,9 @@ def handle_command(conn, addr):
                 print(f"[{MY_ID}] Successfully sent chunk {chunk_id}")
             else:
                 print(f"[{MY_ID}] Error: Chunk {chunk_id} not found.")
+                conn.sendall(json.dumps({"status": "ERROR", "message": "Chunk not found"}).encode())
 
+        # --- Handle REPLICATE_CHUNK command ---
         elif command == 'REPLICATE_CHUNK':
             print(f"[{MY_ID}] Received replication command from Namenode.")
             chunk_id = header.get('chunk_id')
@@ -146,6 +153,7 @@ def handle_command(conn, addr):
             
             if not os.path.exists(chunk_path):
                 print(f"[{MY_ID}] Error: Cannot replicate chunk {chunk_id}, I don't have it.")
+                conn.sendall(json.dumps({"status": "ERROR", "message": "Chunk not found"}).encode())
                 return
 
             with open(chunk_path, 'rb') as f:
@@ -160,9 +168,11 @@ def handle_command(conn, addr):
     finally:
         conn.close()
 
+
 def listen_for_commands():
+    """Main listener for commands from the Namenode or other Datanodes."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((MY_INFO["host"], MY_INFO["port"]))
         s.listen()
         print(f"[{MY_ID}] Listening for commands on {MY_INFO['host']}:{MY_INFO['port']}")
@@ -170,6 +180,7 @@ def listen_for_commands():
             conn, addr = s.accept()
             print(f"[{MY_ID}] Connection from {addr}")
             threading.Thread(target=handle_command, args=(conn, addr), daemon=True).start()
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
