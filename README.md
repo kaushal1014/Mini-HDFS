@@ -16,7 +16,7 @@ This project is intended strictly for academic and learning purposes.
 
 ## Project Structure
 
-18_Project1_BD/  
+Src/  
 ├── client/  
 ├── datanode_0.py  
 ├── datanode_1.py  
