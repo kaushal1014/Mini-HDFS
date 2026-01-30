@@ -37,7 +37,7 @@ CLIENT_PORT = 8080
 # --- 5. File System Configuration ---
 CHUNK_SIZE_MB = 2
 CHUNK_SIZE_BYTES = CHUNK_SIZE_MB * 1024 * 1024
-REPLICATION_FACTOR = 2
+REPLICATION_FACTOR = 3
 HEARTBEAT_INTERVAL_SEC = 5
 
 # --- 6. Secondary Namenode Configuration ---
